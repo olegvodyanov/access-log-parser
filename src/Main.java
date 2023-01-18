@@ -4,6 +4,8 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.util.Scanner;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class Main {
     public static void main(String[] args) {
@@ -35,6 +37,11 @@ public class Main {
                     int maxLineLength = Integer.MIN_VALUE;
                     int minLineLength = Integer.MAX_VALUE;
                     int lineCounter = 0;
+                    int counterGoogleBot = 0;
+                    int counterYandexBot = 0;
+
+                    final String regex = "([\\d]{1,3}[\\.][\\d]{1,3}[\\.][\\d]{1,3}[\\.][\\d]{1,3})\\s([\\-|\\s])\\s([\\-|\\s])\\s([\\[].+[\\]])\\s(\\\".+\\\")\\s([\\d]+)\\s([\\d]+)\\s(\\\".+\\\")\\s(\\\".+\\\")";
+                    final Pattern pattern = Pattern.compile(regex, Pattern.MULTILINE);
 
                     while ((line = reader.readLine()) != null) {
                         int length = line.length();
@@ -42,15 +49,29 @@ public class Main {
                         if (length < minLineLength) minLineLength = length;
                         lineCounter++;
 
+                        final Matcher matcher = pattern.matcher(line);
+
+                        while (matcher.find()) {
+                            String userAgent = matcher.group(9);
+
+                            if (userAgent.contains("Googlebot")) {
+                                counterGoogleBot++;
+                            } else if (userAgent.contains("YandexBot")) {
+                                counterYandexBot++;
+                            }
+                        }
+
                         if (maxLineLength > 1024)
                             throw new StringAttributeException("Длина строки не может превышать 1024 символа. " +
                                     "Длина найденной строки " + maxLineLength);
                     }
 
+                    double gResult = ((double) counterGoogleBot / (double) lineCounter) * 100;
+                    double yResult = ((double) counterYandexBot / (double) lineCounter) * 100;
+                    System.out.println("Доля запросов Google " + gResult);
+                    System.out.println("Доля запросов Yandex " + yResult);
 
-                    System.out.println("maxLineLength " + maxLineLength);
-                    System.out.println("minLineLength " + minLineLength);
-                    System.out.println("counter " + lineCounter);
+
                 } catch (Exception ex) {
                     ex.printStackTrace();
                 }
