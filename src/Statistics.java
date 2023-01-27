@@ -10,15 +10,19 @@ public class Statistics {
     private long totalTraffic;
     private LocalDateTime minTime;
     private LocalDateTime maxTime;
-    private HashSet<String> allEndpoints;
+    private HashSet<String> allExistingEndpoints;
+    private HashSet<String> allInvalidEndpoints;
     private HashMap<String, Integer> operatingSystemStat;
+    private HashMap<String, Integer> usersBrowserStat;
 
     public Statistics() {
         totalTraffic = 0;
         minTime = null;
         maxTime = null;
-        allEndpoints = new HashSet<>();
+        allExistingEndpoints = new HashSet<>();
+        allInvalidEndpoints = new HashSet<>();
         operatingSystemStat = new HashMap<>();
+        usersBrowserStat = new HashMap<>();
     }
 
     public void addEntry(LogEntry logEntry) {
@@ -31,7 +35,9 @@ public class Statistics {
 
         String logEntryPath = logEntry.getPath();
         if (logEntry.getResponseCode() == 200) {
-            allEndpoints.add(logEntryPath);
+            allExistingEndpoints.add(logEntryPath);
+        } else if (logEntry.getResponseCode() == 404) {
+            allInvalidEndpoints.add(logEntryPath);
         }
 
         String logEntryOsType = logEntry.getAgent().getTypeOS();
@@ -40,6 +46,14 @@ public class Statistics {
             operatingSystemStat.replace(logEntryOsType, ++counter);
         } else {
             operatingSystemStat.put(logEntryOsType, 1);
+        }
+
+        String logEntryBrowser = logEntry.getAgent().getBrowser();
+        if (usersBrowserStat.containsKey(logEntryBrowser)) {
+            int counter = usersBrowserStat.get(logEntryBrowser);
+            usersBrowserStat.replace(logEntryBrowser, ++counter);
+        } else {
+            usersBrowserStat.put(logEntryBrowser, 1);
         }
     }
 
@@ -54,25 +68,39 @@ public class Statistics {
     }
 
     public List<String> getAllUniquePagesExistingInLogFile() {
-        return new ArrayList<>(allEndpoints);
+        return new ArrayList<>(allExistingEndpoints);
+    }
+
+    public List<String> getAllUniquePagesInvalidInLogFile() {
+        return new ArrayList<>(allInvalidEndpoints);
     }
 
     public HashMap<String, Double> getOsTypeProportionStat() {
         HashMap<String, Double> typeOsProportionMap = new HashMap<>();
-        int totalOsCounter = totalOsTypesCalculator();
+        int totalCounter = totalCalculator(operatingSystemStat);
 
         for (Map.Entry<String, Integer> set : operatingSystemStat.entrySet()) {
-            typeOsProportionMap.put(set.getKey(), ((double) set.getValue() / (double) totalOsCounter) );
+            typeOsProportionMap.put(set.getKey(), ((double) set.getValue() / (double) totalCounter));
         }
         return typeOsProportionMap;
     }
 
-    private int totalOsTypesCalculator() {
-        int typeOsCounter = 0;
-        for (Map.Entry<String, Integer> set : operatingSystemStat.entrySet()) {
-            typeOsCounter += set.getValue();
+    public HashMap<String, Double> getBrowserProportionStat() {
+        HashMap<String, Double> browserProportionMap = new HashMap<>();
+        int totalCounter = totalCalculator(usersBrowserStat);
+
+        for (Map.Entry<String, Integer> set : usersBrowserStat.entrySet()) {
+            browserProportionMap.put(set.getKey(), ((double) set.getValue() / (double) totalCounter));
         }
-        return typeOsCounter;
+        return browserProportionMap;
+    }
+
+    private static int totalCalculator(HashMap<String, Integer> inputSet) {
+        int finalResult = 0;
+        for (Map.Entry<String, Integer> set : inputSet.entrySet()) {
+            finalResult += set.getValue();
+        }
+        return finalResult;
     }
 
     public long getTotalTraffic() {
