@@ -12,15 +12,23 @@ public class Statistics {
     private LocalDateTime maxTime;
     private HashSet<String> allExistingEndpoints;
     private HashSet<String> allInvalidEndpoints;
+    private HashSet<String> uniqueSetOfIpAddresses;
     private HashMap<String, Integer> operatingSystemStat;
     private HashMap<String, Integer> usersBrowserStat;
+    private int noBotsEntriesCounterInLogFile;
+    private static final int GOOD_RESPONSE_CODE = 200;
+    private static final int BAD_RESPONSE_CODE_4XX = 4;
+    private static final int BAD_RESPONSE_CODE_5XX = 5;
+    private static final double TIME_CONSTANT = 60.0;
 
     public Statistics() {
         totalTraffic = 0;
         minTime = null;
         maxTime = null;
+        noBotsEntriesCounterInLogFile = 0;
         allExistingEndpoints = new HashSet<>();
         allInvalidEndpoints = new HashSet<>();
+        uniqueSetOfIpAddresses = new HashSet<>();
         operatingSystemStat = new HashMap<>();
         usersBrowserStat = new HashMap<>();
     }
@@ -34,9 +42,15 @@ public class Statistics {
         }
 
         String logEntryPath = logEntry.getPath();
-        if (logEntry.getResponseCode() == 200) {
+        /*В одном из заданий курсовой работы нам надо отбирать все ошибочные запросы с кодами 4хх и 5хх
+        для этого я привожу числовое значение кода ответа из файла к строке, чтобы потом проверить является ли первый символ
+        кода пятёркой или четвёркой*/
+        String stringWrapperForResponseCode = "" + logEntry.getResponseCode();
+
+        if (logEntry.getResponseCode() == GOOD_RESPONSE_CODE) {
             allExistingEndpoints.add(logEntryPath);
-        } else if (logEntry.getResponseCode() == 404) {
+        } else if (stringWrapperForResponseCode.startsWith(String.valueOf(BAD_RESPONSE_CODE_4XX))
+                || stringWrapperForResponseCode.startsWith(String.valueOf(BAD_RESPONSE_CODE_5XX))) {
             allInvalidEndpoints.add(logEntryPath);
         }
 
@@ -55,22 +69,41 @@ public class Statistics {
         } else {
             usersBrowserStat.put(logEntryBrowser, 1);
         }
+
+       /* Проверяем есть ли в user agent упоминание слова bot. Для этого в UserAgent class добавил
+        добавил логическое поле isBot и метод проверки который строковым методом contains проверяет наличие слова bot*/
+        boolean isBotEntry = logEntry.getAgent().isBot();
+        if (!isBotEntry) {
+            noBotsEntriesCounterInLogFile += 1;
+        }
+
+        String logEntryIpAddr = logEntry.getIpAddr();
+        if (!isBotEntry) {
+            uniqueSetOfIpAddresses.add(logEntryIpAddr);
+        }
+
     }
 
     public long getTrafficRate() {
-        Duration durationBetween = Duration.between(minTime, maxTime);
-        double hours = durationBetween.toHoursPart();
-        double minutesToHours = (double) durationBetween.toMinutesPart() / 60.0;
-        double secondsToHours = (double) durationBetween.toSecondsPart() / 60.0 / 60.0;
-        double durationInHours = hours + minutesToHours + secondsToHours;
-
+        double durationInHours = getTimeInHoursForAllEntriesInLogFile();
         return BigDecimal.valueOf(totalTraffic).divide(BigDecimal.valueOf(durationInHours), RoundingMode.HALF_UP).longValue();
     }
 
+    //Вынес в отдельный метод подсчет времени, так как он используется в разных методах класса Statistics
+    private double getTimeInHoursForAllEntriesInLogFile() {
+        Duration durationBetween = Duration.between(minTime, maxTime);
+        double hours = durationBetween.toHoursPart();
+        double minutesToHours = (double) durationBetween.toMinutesPart() / TIME_CONSTANT;
+        double secondsToHours = (double) durationBetween.toSecondsPart() / TIME_CONSTANT / TIME_CONSTANT;
+        return hours + minutesToHours + secondsToHours;
+    }
+
+    //отдаю список страниц у которых код ответа 200
     public List<String> getAllUniquePagesExistingInLogFile() {
         return new ArrayList<>(allExistingEndpoints);
     }
 
+    //Отдаём список страниц у которых коды ответов 4хх или 5хх
     public List<String> getAllUniquePagesInvalidInLogFile() {
         return new ArrayList<>(allInvalidEndpoints);
     }
@@ -95,12 +128,33 @@ public class Statistics {
         return browserProportionMap;
     }
 
+    public double getAvgNumberOfVisitsByRealUsersPerHour() {
+        double durationInHours = getTimeInHoursForAllEntriesInLogFile();
+        return durationInHours / noBotsEntriesCounterInLogFile;
+    }
+
+    public double getAvgNumberOfInvalidVisitsByRealUsersPerHour() {
+        double durationInHours = getTimeInHoursForAllEntriesInLogFile();
+        int numberOfAllInvalidEndpoints = getNumberOfInvalidRequests();
+        return durationInHours / (double) numberOfAllInvalidEndpoints;
+    }
+
+    public double getAvgVisitsOfOneUniqueUser() {
+        return (double) noBotsEntriesCounterInLogFile / (double) uniqueSetOfIpAddresses.size();
+    }
+
+    /*Вынес в отдельный метод util метод подсчета значений Values из входящих объектов ХешМап
+    Используется в методах получения общего числа замеченных браузеров и операционных систем в лог файле*/
     private static int totalCalculator(HashMap<String, Integer> inputSet) {
         int finalResult = 0;
         for (Map.Entry<String, Integer> set : inputSet.entrySet()) {
             finalResult += set.getValue();
         }
         return finalResult;
+    }
+
+    private int getNumberOfInvalidRequests() {
+        return allInvalidEndpoints.size();
     }
 
     public long getTotalTraffic() {

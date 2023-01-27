@@ -79,11 +79,14 @@ public class Main {
                     double yResult = ((double) counterYandexBot / (double) lineCounter) * 100;
                     System.out.println("Доля запросов Google " + gResult);
                     System.out.println("Доля запросов Yandex " + yResult);
-
+                    //Для отладки
                     System.out.println("Min time " + statistics.getMinTime());
                     System.out.println("Max time " + statistics.getMaxTime());
                     System.out.println("Total traffic " + statistics.getTotalTraffic());
                     System.out.println("Traffic rate " + statistics.getTrafficRate());
+                    System.out.println("AvgNumberOfVisitsByRealUsersPerHour " + statistics.getAvgNumberOfVisitsByRealUsersPerHour());
+                    System.out.println("AvgNumberOfInvalidVisitsByRealUsersPerHour " + statistics.getAvgNumberOfInvalidVisitsByRealUsersPerHour());
+                    System.out.println("AvgVisitsOfOneUniqueUser " + statistics.getAvgVisitsOfOneUniqueUser());
 
 
                 } catch (Exception ex) {
