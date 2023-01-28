@@ -12,6 +12,7 @@ import java.util.regex.Pattern;
 public class LogEntry {
     private static final String REGEX = "([\\d]{1,3}[\\.][\\d]{1,3}[\\.][\\d]{1,3}[\\.][\\d]{1,3})\\s([\\-|\\s])" +
             "\\s([\\-|\\s])\\s\\[([^]]*)\\]\\s\\\"([^\\\"]*)\\\"\\s([\\d]+)\\s([\\d]+)\\s\\\"([^\\\"]*)\\\"\\s\\\"([^\\\"]*)\\\"";
+    private static final String REGEX_DOMAIN = "\\/\\/([\\w|\\-]+\\.\\w{1,5})";
     private static final String TIME_PATTERN = "dd/MMM/yyyy:HH:mm:ss Z";
     private final String ipAddr;
     private final String attributeOne;
@@ -23,6 +24,7 @@ public class LogEntry {
     private final int responseSize;
     private final String referer;
     private final UserAgent agent;
+    private final String domain;
 
     public LogEntry(String logString) {
         final Pattern pattern = Pattern.compile(REGEX, Pattern.MULTILINE);
@@ -49,6 +51,23 @@ public class LogEntry {
         this.referer = matcher.group(8);
         this.agent = new UserAgent(matcher.group(9));
 
+        /*Выбираем доменное имя путем разделения строки referer по разделителю /
+        Таким образом получаем третим элементом доменное имя, пример https://www.focus-news.net/ делится на части:
+        https:
+        "<пустое место>"
+        www.focus-news.net <- берём вот это значение - индекс 2 в массиве
+        */
+
+        String[] domains = matcher.group(8).split("/");
+        if (domains.length <= 1) {
+            this.domain = null;
+        } else {
+            this.domain = domains[2];
+        }
+    }
+
+    public String getDomain() {
+        return domain;
     }
 
     public String getIpAddr() {

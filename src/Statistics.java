@@ -5,16 +5,22 @@ import java.math.RoundingMode;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class Statistics {
     private long totalTraffic;
+    private int uniqueSecondCounter;
     private LocalDateTime minTime;
     private LocalDateTime maxTime;
     private HashSet<String> allExistingEndpoints;
     private HashSet<String> allInvalidEndpoints;
     private HashSet<String> uniqueSetOfIpAddresses;
+    private HashSet<String> uniqueTimeStamps;
     private HashMap<String, Integer> operatingSystemStat;
     private HashMap<String, Integer> usersBrowserStat;
+    private HashMap<String, Integer> numberOfVisitsFoEachRealUserMap;
+    private TreeMap<String, Integer> amountOfVisitsEachSecond;
+    private HashSet<String> domainAddresses;
     private int noBotsEntriesCounterInLogFile;
     private static final int GOOD_RESPONSE_CODE = 200;
     private static final int BAD_RESPONSE_CODE_4XX = 4;
@@ -26,11 +32,16 @@ public class Statistics {
         minTime = null;
         maxTime = null;
         noBotsEntriesCounterInLogFile = 0;
+        uniqueSecondCounter = 0;
         allExistingEndpoints = new HashSet<>();
         allInvalidEndpoints = new HashSet<>();
         uniqueSetOfIpAddresses = new HashSet<>();
+        uniqueTimeStamps = new HashSet<>();
         operatingSystemStat = new HashMap<>();
         usersBrowserStat = new HashMap<>();
+        numberOfVisitsFoEachRealUserMap = new HashMap<>();
+        amountOfVisitsEachSecond = new TreeMap<>();
+        domainAddresses = new HashSet<>();
     }
 
     public void addEntry(LogEntry logEntry) {
@@ -73,13 +84,31 @@ public class Statistics {
        /* Проверяем есть ли в user agent упоминание слова bot. Для этого в UserAgent class добавил
         добавил логическое поле isBot и метод проверки который строковым методом contains проверяет наличие слова bot*/
         boolean isBotEntry = logEntry.getAgent().isBot();
+
         if (!isBotEntry) {
+            //Если запись не относится к боту то добавляем IP адрес в набор
+            String logEntryIpAddr = logEntry.getIpAddr();
+            uniqueSetOfIpAddresses.add(logEntryIpAddr);
+            //Если запись не относится к боту то добавляем единицу к счетчику реальных запросов (сделанных людьми)
             noBotsEntriesCounterInLogFile += 1;
+            //Если запись не относится к боту то добавляем время в TreeMap (для сортировки) Далее в методе меняем ключи со строк на числа
+            String logEntryTime = logEntry.getTime().toString();
+            if (amountOfVisitsEachSecond.containsKey(logEntryTime)) {
+                amountOfVisitsEachSecond.replace(logEntryTime, amountOfVisitsEachSecond.get(logEntryTime) + 1);
+            } else {
+                amountOfVisitsEachSecond.put(logEntryTime, 1);
+            }
+
+            if (numberOfVisitsFoEachRealUserMap.containsKey(logEntryIpAddr)) {
+                numberOfVisitsFoEachRealUserMap.replace(logEntryIpAddr, numberOfVisitsFoEachRealUserMap.get(logEntryIpAddr) + 1);
+            } else {
+                numberOfVisitsFoEachRealUserMap.put(logEntryIpAddr, 1);
+            }
         }
 
-        String logEntryIpAddr = logEntry.getIpAddr();
-        if (!isBotEntry) {
-            uniqueSetOfIpAddresses.add(logEntryIpAddr);
+        String logEntryDomain = logEntry.getDomain();
+        if (logEntryDomain != null && !logEntryDomain.equals("-")) {
+            domainAddresses.add(logEntryDomain);
         }
 
     }
@@ -143,6 +172,14 @@ public class Statistics {
         return (double) noBotsEntriesCounterInLogFile / (double) uniqueSetOfIpAddresses.size();
     }
 
+    public int getMaxVisitsByOneUniqueUser() {
+        Optional<Map.Entry<String, Integer>> maxEntry = numberOfVisitsFoEachRealUserMap.entrySet()
+                .stream()
+                .max(Map.Entry.comparingByValue());
+        return maxEntry.get()
+                .getValue();
+    }
+
     /*Вынес в отдельный метод util метод подсчета значений Values из входящих объектов ХешМап
     Используется в методах получения общего числа замеченных браузеров и операционных систем в лог файле*/
     private static int totalCalculator(HashMap<String, Integer> inputSet) {
@@ -167,5 +204,23 @@ public class Statistics {
 
     public LocalDateTime getMaxTime() {
         return maxTime;
+    }
+
+    public HashSet<String> getDomainAddresses() {
+        return domainAddresses;
+    }
+
+    public int getNumberOfVisitsForParticularSecond(Integer particularSecond) {
+        if (particularSecond < 0 || particularSecond > amountOfVisitsEachSecond.size())
+            throw new IllegalArgumentException("Вы ввели несуществующее количество секунд");
+
+        AtomicInteger i = new AtomicInteger();
+        HashMap<Integer, Integer> map = new HashMap<>();
+        if (amountOfVisitsEachSecond != null || amountOfVisitsEachSecond.size() > 0) {
+            amountOfVisitsEachSecond.forEach((s, integer) -> map.put(i.getAndIncrement(), integer));
+        }
+
+
+        return map.get(particularSecond);
     }
 }

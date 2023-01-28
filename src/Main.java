@@ -14,6 +14,8 @@ public class Main {
     private static final int MAX_LINE_LENGTH = 1024;
     private static final String REGEX = "([\\d]{1,3}[\\.][\\d]{1,3}[\\.][\\d]{1,3}[\\.][\\d]{1,3})\\s([\\-|\\s])" +
             "\\s([\\-|\\s])\\s\\[([^]]*)\\]\\s\\\"([^\\\"]*)\\\"\\s([\\d]+)\\s([\\d]+)\\s\\\"([^\\\"]*)\\\"\\s\\\"([^\\\"]*)\\\"";
+
+
     public static void main(String[] args) {
         int counterOfCorrectlyProvidedFiles = 0;
         while (true) {
@@ -80,13 +82,22 @@ public class Main {
                     System.out.println("Доля запросов Google " + gResult);
                     System.out.println("Доля запросов Yandex " + yResult);
                     //Для отладки
+                    System.out.println();
+                    System.out.println("+++++++++++++++++Отладка начало++++++++++++++++");
                     System.out.println("Min time " + statistics.getMinTime());
                     System.out.println("Max time " + statistics.getMaxTime());
                     System.out.println("Total traffic " + statistics.getTotalTraffic());
                     System.out.println("Traffic rate " + statistics.getTrafficRate());
-                    System.out.println("AvgNumberOfVisitsByRealUsersPerHour " + statistics.getAvgNumberOfVisitsByRealUsersPerHour());
-                    System.out.println("AvgNumberOfInvalidVisitsByRealUsersPerHour " + statistics.getAvgNumberOfInvalidVisitsByRealUsersPerHour());
-                    System.out.println("AvgVisitsOfOneUniqueUser " + statistics.getAvgVisitsOfOneUniqueUser());
+                    System.out.println("Avg number of visits by real users per hour " + statistics.getAvgNumberOfVisitsByRealUsersPerHour());
+                    System.out.println("Avg number of invalid visits by real users per hour " + statistics.getAvgNumberOfInvalidVisitsByRealUsersPerHour());
+                    System.out.println("Avg visits of one unique user " + statistics.getAvgVisitsOfOneUniqueUser());
+                    System.out.println("Browser proportion statistics " + statistics.getBrowserProportionStat());
+                    System.out.println("OS type proportion statistics " + statistics.getOsTypeProportionStat());
+                    System.out.println("Visits for particular second " + statistics.getNumberOfVisitsForParticularSecond(5));
+                    System.out.println("Number of valid pages with code 2xx " + statistics.getAllUniquePagesExistingInLogFile().size());
+                    System.out.println("Number of invalid pages with code 4xx or 5xx " + statistics.getAllUniquePagesInvalidInLogFile().size());
+                    System.out.println("Max number of visits by one unique users " + statistics.getMaxVisitsByOneUniqueUser());
+                    System.out.println("+++++++++++++++++Отладка конец++++++++++++++++");
 
 
                 } catch (Exception ex) {
